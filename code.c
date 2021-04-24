@@ -77,11 +77,51 @@ int main(int argc, char **argv)
         line++;
     }
 
-    char *affix = "ni";
+    //get user input to search for different affixes
+    printf("Format is prefix*/*infix*/*suffix\n");
+    for(;;)
+    {
+        char input[512];
+        char affix[512];
+        printf("Enter an affix to search for (0 to quit): ");
+        scanf("%s", input);
 
-    linked_list_t *test = affix_search(&t, affix, (void*)line);
-    size_t num = list_count(test);
-    printf("The number of elements for %s is: %zu\n", affix, num);
+        if(strcmp("0", input) == 0)
+            break;
+
+        if(input[0] == '*') //case of infix and suffix
+        {
+            strcpy(affix,&input[1]); //remove star at beginning
+
+            if(affix[strlen(affix)-1] == '*') //case of infix
+            {
+                affix[strlen(affix)-1] = '\0'; //remove star at end
+            }
+            
+            else //case of suffix
+            {
+                char *temp = strrev(affix); //reverse the input for affix
+                strcpy(affix, temp);
+            }
+        }
+        else if(input[strlen(input)-1] == '*') //case of prefix
+        {
+            strcpy(affix, input);
+            affix[strlen(affix)-1] = '\0'; //remove star at end
+        }
+        else
+        {
+            printf("Incorrect format, try again\n");
+        }
+
+        if(affix[0] != '\0')
+        {
+            //printf("%s\n", affix);
+            linked_list_t *search_results = affix_search(&t, affix, (void*)line);
+            size_t num = list_count(search_results);
+            printf("The number of elements for %s is: %zu\n", input, num);
+        }
+    }
 
     //search through the tree and print the results
     /*
