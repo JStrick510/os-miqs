@@ -4,6 +4,11 @@
 #include <string.h>
 #include <time.h>
 
+typedef struct _infix_iter_arg{
+    linked_list_t *rst;
+    char *infix;
+} infix_iter_arg_t;
+
 char *strrev(char *str)
 {
       char *p1, *p2;
@@ -19,12 +24,24 @@ char *strrev(char *str)
       return str;
 }
 
+int contains(const char *str, const char *tok){
+    return strstr(str, tok) != NULL;
+}
+
 int prefix_callback(void *data, const unsigned char *key, uint32_t key_len, void *value){
     linked_list_t *rst = (linked_list_t *)data;
     return list_push_value(rst, value);
 }
 
-linked_list_t *affix_search(art_tree *t, char *affix, void *data)
+int infix_callback(void *data, const unsigned char *key, uint32_t key_len, void *value) {
+    infix_iter_arg_t *args = (infix_iter_arg_t *)data;
+    if (contains((const char *)key, args->infix)) {
+        return list_push_value(args->rst, value);
+    }
+    return 0;
+}
+
+linked_list_t *affix_search(art_tree *t, char *affix, int flag)
 {
     linked_list_t *rst = NULL;
     //if art is empty return null
@@ -35,7 +52,17 @@ linked_list_t *affix_search(art_tree *t, char *affix, void *data)
 
     //return list of elements that match
     rst = list_create();
-    art_iter_prefix(t, (const unsigned char *)affix, strlen(affix), prefix_callback, rst);
+
+    infix_iter_arg_t data = {rst, affix};
+    
+    if(flag == 0)
+    {
+        //printf("%s\n", affix);
+        art_iter_prefix(t, (const unsigned char *)affix, strlen(affix), prefix_callback, rst);
+    }
+    else
+        art_iter(t, infix_callback, &data);
+
     return rst;
 }
 
@@ -68,6 +95,7 @@ int main(int argc, char **argv)
         elements_in_tree++;
 
         //insert all possible suffixes of string
+        /*
         for(int c = 1; c < strlen(buf); c++)
         {
             char *suffix;
@@ -75,6 +103,7 @@ int main(int argc, char **argv)
             art_insert(&t, (unsigned char*)suffix, strlen(suffix), (void*)line);
             elements_in_tree++;
         }
+        */
 
         //insert reversed
         char *reversed = strrev(buf);
@@ -149,7 +178,7 @@ int main(int argc, char **argv)
     FILE *q = fopen("query.txt", "r");
     
     line = 1;
-    int count = 0;
+    int count = 0; 
     double prefix_sum = 0;
     double infix_sum = 0;
     double suffix_sum = 0;
@@ -159,6 +188,7 @@ int main(int argc, char **argv)
     {
         len = strlen(input);
         input[len-2] = '\0'; //-2 instead of -1 due to \n char
+        int infix_flag = 0;
         
         if(strcmp("0", input) == 0)
             break;
@@ -170,6 +200,7 @@ int main(int argc, char **argv)
             if(affix[strlen(affix)-1] == '*') //case of infix
             {
                 affix[strlen(affix)-1] = '\0'; //remove star at end
+                infix_flag = 1;
             }
             
             else //case of suffix
@@ -191,7 +222,7 @@ int main(int argc, char **argv)
         if(affix[0] != '\0')
         {
             clock_t begin_query = clock();
-            linked_list_t *search_results = affix_search(&t, affix, (void*)line);
+            linked_list_t *search_results = affix_search(&t, affix, infix_flag);
             clock_t end_query = clock();
             double time_spent_query = (double)(end_query - begin_query) / CLOCKS_PER_SEC;
             size_t num = list_count(search_results);
@@ -212,10 +243,10 @@ int main(int argc, char **argv)
 
     fclose(q);
 
-    printf("The prefix average query was: %f\n", prefix_sum/333);
-    printf("The infix average query was: %f\n", infix_sum/333);
-    printf("The suffix average query was: %f\n", suffix_sum/333);
-    printf("The total average query was: %f\n", (prefix_sum+infix_sum+suffix_sum)/999);
+    printf("The prefix average query was: %0.8f\n", prefix_sum/333);
+    printf("The infix average query was: %0.8f\n", infix_sum/333);
+    printf("The suffix average query was: %0.8f\n", suffix_sum/333);
+    printf("The total average query was: %0.8f\n", (prefix_sum+infix_sum+suffix_sum)/999);
 
     return 0;
 }
